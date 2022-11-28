@@ -1,11 +1,11 @@
-Problem:
+# Problem
 - we want to use hijri date in the system
 
-Steps to add hijri date:
-1. When you create a date field, add another field for the hijri date that should have the same label and ends with "_hijri".
-Example: if you create a new date field labelled "start_date", then you should add another date field labelled "start_date_hijri"
+# Steps to add hijri date
+1. When you create a date field, add another **date field** for the hijri date that should have the same label and ends with "_hijri".
+**Example: **if you create a new date field labelled "start_date", then you should add another date field labelled "start_date_hijri"
 
-2. In the doctype js file on setup, add the following code:
+2. In the doctype js file **on setup**, add the following code:
 ```
 setup: async function(frm) {
 	// get the calendar type from the core configuration 
@@ -84,7 +84,7 @@ setup: async function(frm) {
 }
 ```
 
-Example: if the name of the doctype where you added the date fields called "Student", then you should add the code above like this:
+**Example: **if the name of the doctype where you added the date fields called "Student", then you should add the code above like this:
 ```
 frappe.ui.form.on('Student', {
 	setup: async function(frm) {
@@ -93,9 +93,9 @@ frappe.ui.form.on('Student', {
 });
 
 ```
+
 3. Add the helper functions in each doctype js file or add them to a separate file and call them from the current file
 ```
-
 function set_gregorian_field_from_hijri(hijri_date_field, gregorian_date_field) {
 	const hijri_date = hijri_date_field.value;
 	if (!hijri_date) return;
