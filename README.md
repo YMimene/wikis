@@ -7,82 +7,81 @@ Example: if you create a new date field labelled "start_date", then you should a
 
 2. In the doctype js file on setup, add the following code:
 ```
-// get the calendar type from the core configuration 
-const calendar_type = await frappe.db.get_single_value("Core Configuration", "calendar_type");
-is_hijri = calendar_type === "Hijri Om-Qura";
+setup: async function(frm) {
+	// get the calendar type from the core configuration 
+	const calendar_type = await frappe.db.get_single_value("Core Configuration", "calendar_type");
+	is_hijri = calendar_type === "Hijri Om-Qura";
 
-// get date fields (not hijri)
-date_field_names = []
-Object.entries(frm.fields_dict).forEach(([key, value]) => {
-	if (value.df.fieldtype == "Date" && !value.df.fieldname.endsWith("_hijri")) {
-		date_field_names.push(value.df.fieldname);
-	}
+	// get date fields (not hijri)
+	gregorian_date_field_names = []
+	Object.entries(frm.fields_dict).forEach(([key, value]) => {
+		if (value.df.fieldtype == "Date" && !value.df.fieldname.endsWith("_hijri")) {
+			gregorian_date_field_names.push(value.df.fieldname);
+		}
+		});
+
+	// hide and show depend on the calendar type ans set hijri caledar date
+	gregorian_date_field_names.forEach((gregorian_date_field_name) => {
+		const hijri_date_field_name = gregorian_date_field_name + "_hijri";
+
+		const gregorian_date_field = frm.fields_dict[gregorian_date_field_name];
+		const hijri_date_field = frm.fields_dict[hijri_date_field_name];
+
+		if (is_hijri) {
+			gregorian_date_field.df.hidden = 1;
+			// gregorian_date_field.df.read_only = 1;
+		} else {
+			hijri_date_field.df.hidden = 1;
+			// hijri_date_field.df.read_only = 1;
+		}
+		set_hijri_field_from_gregorian(hijri_date_field, gregorian_date_field);
 	});
+	frm.refresh_fields();
 
-// hide and show depend on the calendar type ans set hijri caledar date
-date_field_names.forEach((date_field_name) => {
-	const hijri_date_field_name = date_field_name + "_hijri";
+	// create functions that manipulate dates and assign them to the fields
+	gregorian_date_field_names.forEach((gregorian_date_field_name) => {
+		const hijri_date_field_name = gregorian_date_field_name + "_hijri";
 
-	const date_field = frm.fields_dict[date_field_name];
-	const hijri_date_field = frm.fields_dict[hijri_date_field_name];
+		// get date and hijri date fields
+		const gregorian_date_field = frm.fields_dict[gregorian_date_field_name];
+		const hijri_date_field = frm.fields_dict[hijri_date_field_name];
 
-	if (is_hijri) {
-		date_field.df.hidden = 1;
-		set_hijri_calendar_date(hijri_date_field.value, hijri_date_field.cal);
-	} else {
-		hijri_date_field.df.hidden = 1;
-	}
-});
-frm.refresh_fields();
+		// create gregorian date function
+		const gregorian_date_function = () => {
+			if (is_hijri) return;
 
-// create functions that manipulate dates and assign them to the fields
-date_field_names.forEach((date_field_name) => {
-	const hijri_date_field_name = date_field_name + "_hijri";
+			const gregorian_date_value = gregorian_date_field.value;
+			if (!gregorian_date_value) {
+				hijri_date_field.set_value("");
+				return;
+			}
 
-	// get date and hijri date fields
-	const date_field = frm.fields_dict[date_field_name];
-	const hijri_date_field = frm.fields_dict[hijri_date_field_name];
-
-	// create date function
-	const date_function = () => {
-		if (is_hijri) return;
-
-		const date_value = date_field.value;
-		if (!date_value) {
-			hijri_date_field.set_value("");
-			return;
+			// set hijri date field based on gregorian date
+			set_hijri_field_from_gregorian(hijri_date_field, gregorian_date_field);
+			frm.refresh_fields();
 		}
 
-		// get gregorian date
-		const date_splitted = date_value.split("-");
-		const day = parseInt(date_splitted[2]);
-		const month = parseInt(date_splitted[1]);
-		const year = parseInt(date_splitted[0]);
+		// create hijri date function
+		const hijri_date_function = () => {
+			// to prevent loop
+			if (!is_hijri) return;
+			
+			const hijri_date_value = hijri_date_field.value;
+			if (!hijri_date_value) {
+				gregorian_date_field.set_value("");
+				return;
+			}
 
-		// convert from gregorian to hijri
-		const date_value_hijri  = from_gregorian_to_hijri(day, month, year, true);
-		
-		// set hijri date in the field and calendar
-		hijri_date_field.set_value(date_value_hijri);
-		set_hijri_calendar_date(date_value_hijri, hijri_date_field.cal);
+			// set gregorian date field based on hijri date
+			set_gregorian_field_from_hijri(hijri_date_field, gregorian_date_field);
+			frm.refresh_fields();
+		}
 
-		frm.refresh_fields();
-	}
-
-	// create hijri date function
-	const hijri_date_function = () => {
-		// to prevent loop
-		if (!is_hijri) return;
-
-		// get hijri date and convert it to show it
-		const date_value = from_hijri_to_gregorian(hijri_date_field.cal.getDate(), true);
-		date_field.set_value(date_value);
-	}
-
-	// assign function to the fields
-	frappe.ui.form.on('Academic Service', date_field_name, date_function);
-	frappe.ui.form.on('Academic Service', hijri_date_field_name, hijri_date_function);
-});
+		// assign function to the fields
+		frappe.ui.form.on('Academic Service', gregorian_date_field_name, gregorian_date_function);
+		frappe.ui.form.on('Academic Service', hijri_date_field_name, hijri_date_function);
+	});
+}
 ```
 
 Example: if the name of the doctype where you added the date fields called "Student", then you should add the code above like this:
@@ -96,56 +95,37 @@ frappe.ui.form.on('Student', {
 ```
 3. Add the helper functions in each doctype js file or add them to a separate file and call them from the current file
 ```
-function from_hijri_to_gregorian(date, is_reversed = false) {
-	// get date fields
-	date = date.getGregorianDate();
-	const day = date.getDate();
-	const month = date.getMonth() + 1;
-	const year = date.getFullYear();
 
-	return get_formatted_date(day, month, year, is_reversed);
-}
-
-
-function from_gregorian_to_hijri(day, month, year, is_reversed = false) {
-	let hijri_date = new Intl.DateTimeFormat('en-US', {
-		calendar: 'islamic-umalqura',
-	}).format(Date.UTC(year, month - 1, day));
-
-	hijri_date = hijri_date.split(" ")[0].split("/");
-
-	day = hijri_date[1];
-	month = hijri_date[0];
-	year = hijri_date[2];
-
-	return get_formatted_date(day, month, year, is_reversed);
-}
-
-
-function get_formatted_date(day, month, year, is_reversed = false) {
-	// convert to string
-	day = day.toString();
-	month = month.toString();
-	year = year.toString();
-
-	// add leading 0
-    if (month.length < 2) month = "0" + month;
-    if (day.length < 2) day = "0" + day;
-    
-	if (is_reversed) 
-        return `${year}-${month}-${day}`;
-    return `${day}-${month}-${year}`;
-}
-
-
-function set_hijri_calendar_date(hijri_date, calendar) {
+function set_gregorian_field_from_hijri(hijri_date_field, gregorian_date_field) {
+	const hijri_date = hijri_date_field.value;
 	if (!hijri_date) return;
-	const hijri_date_splitted = hijri_date.split("-");
 
-	const day = hijri_date_splitted[2];
-	const month = parseInt(hijri_date_splitted[1]) - 1;
-	const year = hijri_date_splitted[0];
+	// get hijri date fields
+	const hijri_date_splitted = hijri_date_field.value.split("-");
+	const year = parseInt(hijri_date_splitted[0]);
+	const month = parseInt(hijri_date_splitted[1]);
+	const day = parseInt(hijri_date_splitted[2]);
 
-	calendar.setDate(year, month, day);
+	// convert from hijri to gregorian and set the gregorian field
+	const jd = hijri_date_field.hijri_calendar.newDate(year, month, day).toJD()
+	const gregorian_date = $.calendars.instance().fromJD(jd);
+	gregorian_date_field.set_value(gregorian_date.formatDate("yyyy-mm-dd"));
+}
+
+
+function set_hijri_field_from_gregorian(hijri_date_field, gregorian_date_field) {
+	const gregorian_date = gregorian_date_field.value;
+	if (!gregorian_date) return;
+	
+	// get gregorian date fields
+	const gregorian_date_splitted = gregorian_date_field.value.split("-");
+	const year = parseInt(gregorian_date_splitted[0]);
+	const month = parseInt(gregorian_date_splitted[1]);
+	const day = parseInt(gregorian_date_splitted[2]);
+
+	// convert from gregorian to hijri and set the hijri field
+	const jd = $.calendars.instance().newDate(year, month, day).toJD()
+	const hijri_date = hijri_date_field.hijri_calendar.fromJD(jd);
+	hijri_date_field.set_value(hijri_date.formatDate("yyyy-mm-dd"));
 }
 ```
