@@ -17,6 +17,7 @@ setup: function(frm) {
 frappe.ui.form.on('Student', {
 	setup: function(frm) {
             MedadUtils.enable_hijri_dates(frm);
+	    // the rest of the code if exists
 	}
 });
 
