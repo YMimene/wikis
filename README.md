@@ -10,10 +10,10 @@
 setup: async function(frm) {
 	// get the calendar type from the core configuration 
 	const calendar_type = await frappe.db.get_single_value("Core Configuration", "calendar_type");
-	is_hijri = calendar_type === "Hijri Om-Qura";
+	const is_hijri = calendar_type === "Hijri Om-Qura";
 
 	// get date fields (not hijri)
-	gregorian_date_field_names = []
+	const gregorian_date_field_names = []
 	Object.entries(frm.fields_dict).forEach(([key, value]) => {
 		if (value.df.fieldtype == "Date" && !value.df.fieldname.endsWith("_hijri")) {
 			gregorian_date_field_names.push(value.df.fieldname);
@@ -34,7 +34,9 @@ setup: async function(frm) {
 			hijri_date_field.df.hidden = 1;
 			// hijri_date_field.df.read_only = 1;
 		}
-		set_hijri_field_from_gregorian(hijri_date_field, gregorian_date_field);
+
+		// refresh hijri calendar
+		MedadUtils.set_hijri_field_from_gregorian(hijri_date_field, gregorian_date_field);
 	});
 	frm.refresh_fields();
 
@@ -57,7 +59,7 @@ setup: async function(frm) {
 			}
 
 			// set hijri date field based on gregorian date
-			set_hijri_field_from_gregorian(hijri_date_field, gregorian_date_field);
+			MedadUtils.set_hijri_field_from_gregorian(hijri_date_field, gregorian_date_field);
 			frm.refresh_fields();
 		}
 
@@ -73,13 +75,13 @@ setup: async function(frm) {
 			}
 
 			// set gregorian date field based on hijri date
-			set_gregorian_field_from_hijri(hijri_date_field, gregorian_date_field);
+			MedadUtils.set_gregorian_field_from_hijri(hijri_date_field, gregorian_date_field);
 			frm.refresh_fields();
 		}
 
 		// assign function to the fields
-		frappe.ui.form.on('Academic Service', gregorian_date_field_name, gregorian_date_function);
-		frappe.ui.form.on('Academic Service', hijri_date_field_name, hijri_date_function);
+		frappe.ui.form.on(frm.doctype, gregorian_date_field_name, gregorian_date_function);
+		frappe.ui.form.on(frm.doctype, hijri_date_field_name, hijri_date_function);
 	});
 }
 ```
@@ -92,40 +94,4 @@ frappe.ui.form.on('Student', {
 	}
 });
 
-```
-
-3. Add the helper functions in each doctype js file or add them to a separate file and call them from the current file
-```
-function set_gregorian_field_from_hijri(hijri_date_field, gregorian_date_field) {
-	const hijri_date = hijri_date_field.value;
-	if (!hijri_date) return;
-
-	// get hijri date fields
-	const hijri_date_splitted = hijri_date_field.value.split("-");
-	const year = parseInt(hijri_date_splitted[0]);
-	const month = parseInt(hijri_date_splitted[1]);
-	const day = parseInt(hijri_date_splitted[2]);
-
-	// convert from hijri to gregorian and set the gregorian field
-	const jd = hijri_date_field.hijri_calendar.newDate(year, month, day).toJD()
-	const gregorian_date = $.calendars.instance().fromJD(jd);
-	gregorian_date_field.set_value(gregorian_date.formatDate("yyyy-mm-dd"));
-}
-
-
-function set_hijri_field_from_gregorian(hijri_date_field, gregorian_date_field) {
-	const gregorian_date = gregorian_date_field.value;
-	if (!gregorian_date) return;
-	
-	// get gregorian date fields
-	const gregorian_date_splitted = gregorian_date_field.value.split("-");
-	const year = parseInt(gregorian_date_splitted[0]);
-	const month = parseInt(gregorian_date_splitted[1]);
-	const day = parseInt(gregorian_date_splitted[2]);
-
-	// convert from gregorian to hijri and set the hijri field
-	const jd = $.calendars.instance().newDate(year, month, day).toJD()
-	const hijri_date = hijri_date_field.hijri_calendar.fromJD(jd);
-	hijri_date_field.set_value(hijri_date.formatDate("yyyy-mm-dd"));
-}
 ```
