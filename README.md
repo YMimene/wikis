@@ -22,3 +22,5 @@ frappe.ui.form.on('Student', {
 });
 
 ```
+
+# How to handle datetime fields
