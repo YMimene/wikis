@@ -23,4 +23,7 @@ frappe.ui.form.on('Student', {
 
 ```
 
+# How to enable hijri dates in child tables
+
+
 # How to handle datetime fields
