@@ -24,6 +24,7 @@ frappe.ui.form.on('Student', {
 ```
 
 # How to enable hijri dates in child tables
+1. for each date field, add a hijri date field in the child table doctype, with a name that ends with "_hijri"
 
 
 # How to handle datetime fields
