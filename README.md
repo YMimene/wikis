@@ -92,9 +92,9 @@ frappe.ui.form.on('Time Ticket Group', {
 ```
 
 # How to handle hijri dates in reports
-for the reports there are two cases,
+for the reports there are two cases:
 
-### 1. when the date is the filters
+### 1. when the date field is in the filters
 in this case, we will define our filters after identifying the type of the calendar. So we will make a function that get the type of the calendar and based on that, we will show gregorian date filters or hijri date filters, here is a commented example on how the **.js** file will look like:
 ```
 // start with no filters
